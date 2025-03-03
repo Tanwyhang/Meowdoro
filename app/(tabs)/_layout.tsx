@@ -11,7 +11,7 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: '#1E1E2E',
+          backgroundColor: '#35715FFF',
           borderTopWidth: 0,
           elevation: 0,
           shadowOpacity: 0,
@@ -19,7 +19,7 @@ export default function TabLayout() {
           paddingBottom: Platform.OS === 'ios' ? (isSmallScreen ? 25 : 30) : (isSmallScreen ? 8 : 10),
           paddingTop: Platform.OS === 'ios' ? 5 : 0,
         },
-        tabBarActiveTintColor: '#FF6B6B',
+        tabBarActiveTintColor: '#FFFFFFFF',
         tabBarInactiveTintColor: '#8F8F9E',
         tabBarLabelStyle: {
           fontFamily: 'Poppins-Regular',
