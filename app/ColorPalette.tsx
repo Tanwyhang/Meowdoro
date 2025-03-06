@@ -1,11 +1,12 @@
 // ColorPalette.tsx
 
 const MatchaColorPalette = {
-    darkGreen: '#138B5FFF', // Dark matcha green
-    mediumGreen: '#4E9673FF', // Medium matcha green
-    lightGreen: '#D3EADFFF', // Light pastel green
-    cream: '#F5F5F5FF', // Soft cream background
-    white: '#FFFFFF', // Pure white
+    5: '#5D856CFF', // Dark matcha green
+    4: '#ABC9B5FF', // Medium matcha green
+    3: '#D9EADEFF', // Light pastel green
+    2: '#F0F1E2FF', // Soft cream background
+    
+    1: '#FFFFFF', // Pure white
   };
   
   export default MatchaColorPalette;

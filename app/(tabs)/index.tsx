@@ -13,6 +13,7 @@ import Animated, {
   withRepeat,
   cancelAnimation,
 } from 'react-native-reanimated';
+
 import { Play, Pause, RotateCcw, SkipForward } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Svg, { Circle as SvgCircle } from 'react-native-svg';
@@ -20,11 +21,16 @@ import Svg, { Circle as SvgCircle } from 'react-native-svg';
 const Circle = SvgCircle;
 
 export default function PomodoroTimer() {
+  
   const { width, height } = useWindowDimensions();
   const isSmallScreen = width < 380 || height < 700;
 
   const CIRCLE_SIZE = Math.min(width * 0.8, height * 0.4);
+
   const CIRCLE_RADIUS = CIRCLE_SIZE / 2;
+  const CIRCLE_2_RADIUS = CIRCLE_RADIUS - 15;
+  const CIRCLE_3_RADIUS = CIRCLE_RADIUS - 30;
+
   const STROKE_WIDTH = isSmallScreen ? 12 : 15;
 
   const [isWorkSession, setIsWorkSession] = useState(true);
@@ -56,7 +62,7 @@ export default function PomodoroTimer() {
 
   const toggleTimer = () => {
 
-    // Pause the timer
+    {/* pause timer */}
     if (isRunning) {
       
       breathingScale.value = withTiming(1, { duration: 300 });
@@ -70,7 +76,7 @@ export default function PomodoroTimer() {
       if (Platform.OS !== 'web') {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       }
-      // Start the timer
+      {/** Start the timer */}
     } else {
 
       breathingScale.value = withRepeat(
@@ -144,7 +150,7 @@ export default function PomodoroTimer() {
 
   return (
     <LinearGradient
-      colors={isWorkSession ? ['#8BE3C2FF', '#FFFFFFFF'] : ['#1B1D21FF', '#3C5F5FFF']}
+      colors={["#EAF1E5FF", "#F4FFF0FF"]}
       style={styles.container}
     >
       <SafeAreaView style={styles.safeArea}>
@@ -182,17 +188,42 @@ export default function PomodoroTimer() {
                 transform: [{ rotateZ: '-90deg' }],
               }}
             >
+              {/*Circle 1 outer*/}
               <Circle
                 cx={CIRCLE_RADIUS}
                 cy={CIRCLE_RADIUS}
                 r={CIRCLE_RADIUS - STROKE_WIDTH / 2}
-
-                stroke={isWorkSession ? '#459D75FF' : '#338E47FF'}
+                stroke={isWorkSession ? MatchaColorPalette[3] : MatchaColorPalette[4]}
                 strokeWidth={STROKE_WIDTH}
                 strokeDasharray={2 * Math.PI * (CIRCLE_RADIUS - STROKE_WIDTH / 2)}
                 strokeLinecap="round"
                 fill="transparent"
               />
+              {/*Circle 2 mid*/}
+              <Circle
+                cx={CIRCLE_RADIUS}
+                cy={CIRCLE_RADIUS}
+                r={CIRCLE_2_RADIUS - STROKE_WIDTH / 2}
+                stroke={isWorkSession ? MatchaColorPalette[4] : MatchaColorPalette[4]}
+                strokeWidth={STROKE_WIDTH}
+                strokeDasharray={2 * Math.PI * (CIRCLE_2_RADIUS - STROKE_WIDTH / 2)}
+                strokeLinecap="round"
+                fill="transparent"
+              />
+              {/*Circle 3 inner*/}
+              <Circle
+                cx={CIRCLE_RADIUS}
+                cy={CIRCLE_RADIUS}
+                r={CIRCLE_3_RADIUS - STROKE_WIDTH / 2}
+                stroke={isWorkSession ? MatchaColorPalette[5] : MatchaColorPalette[4]}
+                strokeWidth={STROKE_WIDTH}
+                strokeDasharray={2 * Math.PI * (CIRCLE_3_RADIUS - STROKE_WIDTH / 2)}
+                strokeLinecap="round"
+                fill="transparent"
+                strokeDashoffset={interpolate(progress.value, [0, 1], [0, 2 * Math.PI * (CIRCLE_3_RADIUS - STROKE_WIDTH / 2)])}
+              />
+              
+              
             </Svg>
             <View style={styles.timeTextContainer}>
               <Text style={[
@@ -252,14 +283,12 @@ export default function PomodoroTimer() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: MatchaColorPalette.cream, // Light cream background for a soft, airy feel
   },
   safeArea: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: Platform.OS === 'ios' ? 40 : 20,
-    backgroundColor: MatchaColorPalette.cream, // Consistent light background
   },
   header: {
     alignItems: 'center',
@@ -269,7 +298,7 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: 'Poppins-Bold',
     fontSize: 28,
-    color: MatchaColorPalette.darkGreen, // Deep matcha green for emphasis
+    color: MatchaColorPalette[5],
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -280,7 +309,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontFamily: 'Poppins-Regular',
     fontSize: 16,
-    color: MatchaColorPalette.mediumGreen, // Slightly lighter green for secondary text
+    color: MatchaColorPalette[5],
     textAlign: 'center',
     paddingHorizontal: 20,
   },
@@ -300,7 +329,7 @@ const styles = StyleSheet.create({
   timeText: {
     fontFamily: 'Poppins-Bold',
     fontSize: 48,
-    color: MatchaColorPalette.darkGreen, // Matcha green for the main timer text
+    color: MatchaColorPalette[5],
   },
   timeTextSmall: {
     fontSize: 40,
@@ -308,7 +337,6 @@ const styles = StyleSheet.create({
   sessionText: {
     fontFamily: 'Poppins-Regular',
     fontSize: 18,
-    color: '#8F8F9E', // Neutral gray for session labels (unchanged)
     marginTop: -5,
   },
   sessionTextSmall: {
@@ -326,7 +354,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 15,
-    backgroundColor: "#317651AC", // Soft pastel green for buttons
+    backgroundColor: MatchaColorPalette[4].slice(0, 7) + "50",
     alignItems: 'center',
     justifyContent: 'center',
     marginHorizontal: 15,
@@ -335,14 +363,14 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 15,
-    backgroundColor: MatchaColorPalette.darkGreen, // Consistent button color
+    backgroundColor: MatchaColorPalette[4].slice(0, 7) + "50",
     marginHorizontal: 10,
   },
   mainControlButton: {
     width: 80,
     height: 80,
     borderRadius: 25,
-    backgroundColor: '#206548FF', // Bold matcha green for the main button with transparency
+    backgroundColor: MatchaColorPalette[5],
     alignItems: 'center',
     justifyContent: 'center',
     marginHorizontal: 20,
@@ -351,7 +379,7 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: MatchaColorPalette.darkGreen + '2C', // Consistent bold green for smaller screens with transparency
+    backgroundColor: MatchaColorPalette[5],
     marginHorizontal: 15,
   },
 });
