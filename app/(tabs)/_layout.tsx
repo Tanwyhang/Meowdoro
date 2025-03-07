@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Clock, Settings } from 'lucide-react-native';
+import { Clock, BarChart2 } from 'lucide-react-native';
 import { Platform, useWindowDimensions } from 'react-native';
 import MatchaColorPalette from '../ColorPalette';
 
@@ -8,6 +8,8 @@ export default function TabLayout() {
   const isSmallScreen = width < 380 || height < 700;
   
   return (
+
+    /** INITIALISE TAB WRAPPER */
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -31,6 +33,8 @@ export default function TabLayout() {
           marginTop: isSmallScreen ? 5 : 0,
         },
       }}>
+
+      {/** Timer tab */}
       <Tabs.Screen
         name="index"
         options={{
@@ -40,15 +44,19 @@ export default function TabLayout() {
           ),
         }}
       />
+
+      {/** Dashboard tab (TO BE DEVELOPED)*/}
       <Tabs.Screen
-        name="settings"
+        name="dashboard"
         options={{
-          title: 'Settings',
+          title: 'Dashboard',
           tabBarIcon: ({ color, size }) => (
-            <Settings size={isSmallScreen ? size - 2 : size} color={color} />
+            <BarChart2 size={isSmallScreen ? size - 2 : size} color={color} />
           ),
         }}
       />
     </Tabs>
+
+
   );
 }

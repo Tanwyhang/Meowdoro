@@ -76,6 +76,8 @@ export default function PomodoroTimer() {
       if (Platform.OS !== 'web') {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       }
+
+      
       {/** Start the timer */}
     } else {
 
