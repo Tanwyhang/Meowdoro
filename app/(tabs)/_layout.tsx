@@ -23,7 +23,7 @@ export default function TabLayout() {
           paddingTop: Platform.OS === 'ios' ? 5 : 0,
         },
         tabBarActiveTintColor: '#FFFFFFFF',
-        tabBarInactiveTintColor: '#8F8F9E',
+        tabBarInactiveTintColor: '#B3B3C1FF',
         tabBarLabelStyle: {
           fontFamily: 'Poppins-Regular',
           fontSize: isSmallScreen ? 10 : 12,
@@ -45,7 +45,7 @@ export default function TabLayout() {
         }}
       />
 
-      {/** Dashboard tab (TO BE DEVELOPED)*/}
+
       <Tabs.Screen
         name="dashboard"
         options={{

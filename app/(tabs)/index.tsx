@@ -1,8 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Platform, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Platform, useWindowDimensions, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import MatchaColorPalette from '../ColorPalette';
+import { MatchaColorPalette, LimeColorPalette } from '../ColorPalette';
+import SessionTracker from '@/utils/SessionTracker';
+import { Audio } from 'expo-av';
+import { useRouter } from 'expo-router';
+import { UserCircle } from 'lucide-react-native';
 
 import Animated, {
   useSharedValue,
@@ -13,6 +17,7 @@ import Animated, {
   withRepeat,
   cancelAnimation,
 } from 'react-native-reanimated';
+
 import { Play, Pause, RotateCcw, SkipForward } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Svg, { Circle as SvgCircle } from 'react-native-svg';
@@ -21,6 +26,12 @@ const Circle = SvgCircle;
 
 // Main PomodoroTimer component
 export default function PomodoroTimer() {
+  const router = useRouter();
+  
+  // Session time variables for easy debugging (in seconds)
+  const WORK_SESSION_TIME = 25 * 60; // 25 minutes
+  const BREAK_SESSION_TIME = 5 * 60; // 5 minutes
+
   const { width, height } = useWindowDimensions();
   const isSmallScreen = width < 380 || height < 700;
 
@@ -30,11 +41,17 @@ export default function PomodoroTimer() {
   const CIRCLE_3_RADIUS = CIRCLE_RADIUS - 30;
   const STROKE_WIDTH = isSmallScreen ? 12 : 15;
 
+  // STATE with setters
   const [isWorkSession, setIsWorkSession] = useState(true);
   const [isRunning, setIsRunning] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(25 * 60);
-  const [totalTime, setTotalTime] = useState(25 * 60);
+  const [timeLeft, setTimeLeft] = useState(WORK_SESSION_TIME);
+  const [totalTime, setTotalTime] = useState(WORK_SESSION_TIME);
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
 
+  // Session tracker
+  const sessionTracker = SessionTracker.getInstance();
+
+  // ANIMATED values
   const progress = useSharedValue(0);
   const breathingScale = useSharedValue(1);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -46,38 +63,125 @@ export default function PomodoroTimer() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Play notification sound
+  const playNotificationSound = async () => {
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        require('../../assets/sounds/notification.mp3')
+      );
+      setSound(sound);
+      await sound.playAsync();
+    } catch (error) {
+      console.error('Failed to play notification sound:', error);
+    }
+  };
+
+  // Unload sound when component unmounts
+  useEffect(() => {
+    return sound
+      ? () => {
+          sound.unloadAsync();
+        }
+      : undefined;
+  }, [sound]);
+
   // Toggle between work and break sessions
   const toggleSession = () => {
+    // If is work session, check if it's being skipped or completed
+    if (isWorkSession) {
+      // If work session is being skipped (timer still has time left)
+      if (timeLeft < totalTime && timeLeft > 0) {
+        console.log('Skipping work session');
+        sessionTracker.skipSession();
+      } 
+      // If the timer reached the end (timeLeft is 0), it's completed
+      else if (timeLeft === 0) {
+        console.log('Work session completed');
+        sessionTracker.endSession(true);
+      }
+    }
+
+    // Flip the session state: true (work) -> false (break) and vice versa
     const newIsWorkSession = !isWorkSession;
     setIsWorkSession(newIsWorkSession);
-    const newTotalTime = newIsWorkSession ? 25 * 60 : 5 * 60;
+    
+    // Set time based on session type using our variables
+    const newTotalTime = newIsWorkSession ? WORK_SESSION_TIME : BREAK_SESSION_TIME;
     setTotalTime(newTotalTime);
-    setTimeLeft(newTotalTime);
-    progress.value = withTiming(0, { duration: 500, easing: Easing.out(Easing.cubic) });
+    setTimeLeft(newTotalTime); // Reset the countdown
+
+    // If transitioning FROM break TO work session, start a new session
+    if (!isWorkSession && newIsWorkSession) {
+      console.log('Transitioning from break to work, starting new session');
+      sessionTracker.startSession();
+    }
+
+    // Smoothly reset progress animation over 500ms
+    progress.value = withTiming(0, { 
+      duration: 500, 
+      easing: Easing.out(Easing.cubic) 
+    });
+
+    // Give a satisfying haptic buzz on mobile (skip for web)
     if (Platform.OS !== 'web') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
+    
+    // Force update the dashboard by calling loadSessions on the tracker
+    sessionTracker.loadSessions().then(() => {
+      console.log('Dashboard data refreshed');
+    });
+  };
+
+  // Handle skip session with confirmation
+  const handleSkipSession = () => {
+    // On web, skip without confirmation
+    if (Platform.OS === 'web') {
+      toggleSession();
+      return;
+    }
+    
+    // On mobile, show confirmation dialog
+    Alert.alert(
+      "Skip Session",
+      `Are you sure you want to skip this ${isWorkSession ? "work" : "break"} session?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Skip", 
+          onPress: toggleSession,
+          style: "destructive" 
+        }
+      ]
+    );
   };
 
   // Start or pause the timer
   const toggleTimer = () => {
 
-    {/* pause timer */}
-    if (isRunning) {
-      
-      breathingScale.value = withTiming(1, { duration: 300 });
+    if (isRunning) { // pause session
+      console.log('pausing timer');
+      sessionTracker.pauseSession();
 
+      breathingScale.value = withTiming(1, { duration: 300 });
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
-      
-
       if (Platform.OS !== 'web') {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       }
-      {/** Start the timer */}
-    } else {
+
+
+    } else { // resume session
+      console.log('resuming timer');
+
+      // If starting fresh (not resuming)
+      if (timeLeft === totalTime && isWorkSession) {
+        sessionTracker.startSession();
+      } else {
+        sessionTracker.resumeSession();
+      }
 
       breathingScale.value = withRepeat(
         withTiming(1.05, { duration: 2000, easing: Easing.inOut(Easing.cubic) }),
@@ -86,13 +190,22 @@ export default function PomodoroTimer() {
       );
 
       timerRef.current = setInterval(() => {
-
         setTimeLeft((prev) => {
-
           if (prev <= 1) {
             clearInterval(timerRef.current!);
             timerRef.current = null;
             setIsRunning(false);
+            
+            // Session completed successfully
+            if (isWorkSession) {
+              sessionTracker.endSession(true);
+              
+              // Explicitly refresh dashboard data
+              sessionTracker.loadSessions().then(() => {
+                console.log('Dashboard data refreshed after completion');
+              });
+            }
+            
             toggleSession();
             if (Platform.OS !== 'web') {
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -107,23 +220,8 @@ export default function PomodoroTimer() {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
     }
-    setIsRunning(!isRunning);
-  };
 
-  // Reset the timer
-  const resetTimer = () => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-    setTimeLeft(totalTime);
-    setIsRunning(false);
-    progress.value = withTiming(0, { duration: 500, easing: Easing.out(Easing.cubic) });
-    cancelAnimation(breathingScale);
-    breathingScale.value = withTiming(1, { duration: 300 });
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    }
+    setIsRunning(!isRunning);
   };
 
   // Update progress value when timeLeft changes
@@ -133,6 +231,12 @@ export default function PomodoroTimer() {
         duration: 1000,
         easing: Easing.inOut(Easing.cubic),
       });
+    }
+
+    // Check if the timer has completed
+    if (timeLeft === 0 && !isRunning) {
+      playNotificationSound();
+      // Session will remain paused instead of auto-continuing
     }
   }, [timeLeft, totalTime]);
 
@@ -144,6 +248,17 @@ export default function PomodoroTimer() {
       }
     };
   }, []);
+
+  // animated stroke dash offset
+  const animatedStrokeDashoffset = useAnimatedStyle(() => {
+    return {
+      strokeDashoffset: interpolate(
+        progress.value,
+        [0, 1],
+        [0, 2 * Math.PI * (CIRCLE_3_RADIUS - STROKE_WIDTH / 2)]
+      ),
+    } as any;
+  });
 
   // Animated styles for the breathing effect
   const circleAnimatedStyle = useAnimatedStyle(() => {
@@ -158,6 +273,8 @@ export default function PomodoroTimer() {
       style={styles.container}
     >
       <SafeAreaView style={styles.safeArea}>
+        {/* Login button at top right */}
+        
         <View style={styles.header}>
           <Text style={[styles.title, isSmallScreen && styles.titleSmall]}>
             {isWorkSession ? 'Work Session' : 'Break Time'}
@@ -197,7 +314,7 @@ export default function PomodoroTimer() {
                 cx={CIRCLE_RADIUS}
                 cy={CIRCLE_RADIUS}
                 r={CIRCLE_RADIUS - STROKE_WIDTH / 2}
-                stroke={isWorkSession ? MatchaColorPalette[3] : MatchaColorPalette[4]}
+                stroke={isWorkSession ? MatchaColorPalette[3] : LimeColorPalette[3]}
                 strokeWidth={STROKE_WIDTH}
                 strokeDasharray={2 * Math.PI * (CIRCLE_RADIUS - STROKE_WIDTH / 2)}
                 strokeLinecap="round"
@@ -208,7 +325,7 @@ export default function PomodoroTimer() {
                 cx={CIRCLE_RADIUS}
                 cy={CIRCLE_RADIUS}
                 r={CIRCLE_2_RADIUS - STROKE_WIDTH / 2}
-                stroke={isWorkSession ? MatchaColorPalette[4] : MatchaColorPalette[4]}
+                stroke={isWorkSession ? MatchaColorPalette[4] : LimeColorPalette[4]}
                 strokeWidth={STROKE_WIDTH}
                 strokeDasharray={2 * Math.PI * (CIRCLE_2_RADIUS - STROKE_WIDTH / 2)}
                 strokeLinecap="round"
@@ -219,12 +336,12 @@ export default function PomodoroTimer() {
                 cx={CIRCLE_RADIUS}
                 cy={CIRCLE_RADIUS}
                 r={CIRCLE_3_RADIUS - STROKE_WIDTH / 2}
-                stroke={isWorkSession ? MatchaColorPalette[5] : MatchaColorPalette[4]}
+                stroke={isWorkSession ? MatchaColorPalette[5] : LimeColorPalette[5]}
                 strokeWidth={STROKE_WIDTH}
                 strokeDasharray={2 * Math.PI * (CIRCLE_3_RADIUS - STROKE_WIDTH / 2)}
                 strokeLinecap="round"
                 fill="transparent"
-                strokeDashoffset={interpolate(progress.value, [0, 1], [0, 2 * Math.PI * (CIRCLE_3_RADIUS - STROKE_WIDTH / 2)])}
+                strokeDashoffset={animatedStrokeDashoffset}
               />
               
               
@@ -248,18 +365,9 @@ export default function PomodoroTimer() {
         <View style={styles.controlsContainer}>
           <TouchableOpacity
             style={[
-              styles.controlButton,
-              isSmallScreen && styles.controlButtonSmall
-            ]}
-            onPress={resetTimer}
-          >
-            <RotateCcw size={isSmallScreen ? 20 : 24} color="#F5F5E0FF" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
               styles.mainControlButton,
-              
-              isSmallScreen && styles.mainControlButtonSmall
+              isSmallScreen && styles.mainControlButtonSmall,
+              isRunning && { opacity: 0.5 } // Lower opacity when running
             ]}
             onPress={toggleTimer}
           >
@@ -269,14 +377,15 @@ export default function PomodoroTimer() {
               <Play size={isSmallScreen ? 28 : 32} color="#F5F5E0FF" />
             )}
           </TouchableOpacity>
+          
           <TouchableOpacity
             style={[
               styles.controlButton,
               isSmallScreen && styles.controlButtonSmall
             ]}
-            onPress={toggleSession}
+            onPress={handleSkipSession}
           >
-            <SkipForward size={isSmallScreen ? 20 : 24} color="#F5F5E0FF" />
+            <SkipForward size={isSmallScreen ? 28 : 32} color="#F5F5E0FF" />
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -355,35 +464,50 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   controlButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 15,
-    backgroundColor: MatchaColorPalette[5].slice(0, 7) + "99",
+    width: 70,
+    height: 70,
+    borderRadius: 20,
+    backgroundColor: MatchaColorPalette[5].slice(0, 7) + "85",
     alignItems: 'center',
     justifyContent: 'center',
     marginHorizontal: 15,
   },
   controlButtonSmall: {
-    width: 44,
-    height: 44,
-    borderRadius: 15,
-    backgroundColor: MatchaColorPalette[5].slice(0, 7) + "99",
+    width: 60,
+    height: 60,
+    borderRadius: 20,
+    backgroundColor: MatchaColorPalette[5].slice(0, 7) + "85",
     marginHorizontal: 10,
   },
   mainControlButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 25,
+    width: 70,
+    height: 70,
+    borderRadius: 20,
     backgroundColor: MatchaColorPalette[5],
     alignItems: 'center',
     justifyContent: 'center',
     marginHorizontal: 20,
   },
   mainControlButtonSmall: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 60,
+    height: 60,
+    borderRadius: 20,
     backgroundColor: MatchaColorPalette[5],
     marginHorizontal: 15,
+  },
+  // Add this new style for the login button
+  loginButton: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 50 : 20,
+    right: 20,
+    zIndex: 10,
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.5,
+    elevation: 2,
   },
 });
