@@ -39,7 +39,7 @@ export default function PomodoroTimer() {
   const CIRCLE_RADIUS = CIRCLE_SIZE / 2;
   const CIRCLE_2_RADIUS = CIRCLE_RADIUS - 15;
   const CIRCLE_3_RADIUS = CIRCLE_RADIUS - 30;
-  const STROKE_WIDTH = isSmallScreen ? 12 : 15;
+  const STROKE_WIDTH = isSmallScreen ? 15 : 18;
 
   // STATE with setters
   const [isWorkSession, setIsWorkSession] = useState(true);
@@ -273,7 +273,6 @@ export default function PomodoroTimer() {
       style={styles.container}
     >
       <SafeAreaView style={styles.safeArea}>
-        {/* Login button at top right */}
         
         <View style={styles.header}>
           <Text style={[styles.title, isSmallScreen && styles.titleSmall]}>
@@ -494,20 +493,5 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: MatchaColorPalette[5],
     marginHorizontal: 15,
-  },
-  // Add this new style for the login button
-  loginButton: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 50 : 20,
-    right: 20,
-    zIndex: 10,
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1.5,
-    elevation: 2,
   },
 });

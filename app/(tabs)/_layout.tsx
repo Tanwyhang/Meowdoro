@@ -27,10 +27,10 @@ export default function TabLayout() {
         tabBarLabelStyle: {
           fontFamily: 'Poppins-Regular',
           fontSize: isSmallScreen ? 10 : 12,
-          marginTop: isSmallScreen ? -5 : 0,
+          marginTop: 5, // Consistent margin for better alignment
         },
         tabBarIconStyle: {
-          marginTop: isSmallScreen ? 5 : 0,
+          marginBottom: -3, // Small negative margin to push icon closer to text
         },
       }}>
 

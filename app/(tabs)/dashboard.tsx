@@ -8,7 +8,6 @@ import { format, parseISO, subDays, isSameDay } from 'date-fns';
 import { Clock, AlertCircle, RefreshCw, ChevronDown, ChevronUp, CheckCircle, SkipForward, Flame, BarChart2, TicketCheckIcon, LogIn } from 'lucide-react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { BarChart } from 'react-native-chart-kit';
-import { supabase } from '../../utils/supabase';
 import { useRouter } from 'expo-router';
 
 // Create a custom bar chart component to allow for rounded tops and labels
@@ -450,12 +449,6 @@ export default function Dashboard() {
               <Text style={[styles.title, isSmallScreen && styles.titleSmall]}>
                 ZenBoard
               </Text>
-              <TouchableOpacity
-                style={styles.loginButtonSmall}
-                onPress={navigateToAuth}
-              >
-                <Text style={styles.loginButtonTextSmall}>Login</Text>
-              </TouchableOpacity>
             </View>
           </View>
 
