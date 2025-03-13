@@ -5,10 +5,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import MatchaColorPalette from '../ColorPalette';
 import SessionTracker, { SessionData } from '../../utils/SessionTracker';
 import { format, parseISO, subDays, isSameDay } from 'date-fns';
-import { Clock, AlertCircle, RefreshCw, ChevronDown, ChevronUp, CheckCircle, SkipForward, Flame, BarChart2, TicketCheckIcon, LogIn } from 'lucide-react-native';
+import { Clock, AlertCircle, RefreshCw, ChevronDown, ChevronUp, CheckCircle, SkipForward, Flame, BarChart2 } from 'lucide-react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { BarChart } from 'react-native-chart-kit';
 import { useRouter } from 'expo-router';
+import { BlurView } from 'expo-blur';
 
 // Create a custom bar chart component to allow for rounded tops and labels
 const CustomBarChart = ({data, width, height, style}: {data: { labels: string[], datasets: { data: number[] }[] }, width: number, height: number, style?: object}) => {
@@ -376,28 +377,6 @@ export default function Dashboard() {
     setUseTestData(!useTestData);
   };
 
-  // Authentication function that uses Supabase
-  const navigateToAuth = async () => {
-    /*
-    try {
-      // Check if the user is already logged in
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session) {
-        // User is already logged in, show a message or log out
-        const { error } = await supabase.auth.signOut();
-        if (error) throw error;
-        console.log("User signed out successfully");
-      } else {
-        // Navigate to authentication page
-        router.push("/auth");
-      }
-    } catch (error) {
-      console.error('Error with authentication:', error);
-    }
-    */
-  };
-
   // Session item renderer for FlatList
   const renderSessionItem = ({ item }: { item: SessionData }) => (
     <View 
@@ -626,22 +605,28 @@ export default function Dashboard() {
     >
       <SafeAreaView style={styles.safeArea}>
 
-        {/* Updated header with title and login button aligned */}
-        <View style={styles.header}>
-          <View style={styles.headerContent}>
-            <Text style={[styles.title, isSmallScreen && styles.titleSmall]}>
-              ZenBoard
-            </Text>
-            <TouchableOpacity
-              style={styles.loginButtonSmall}
-              onPress={navigateToAuth}
-            >
-              <Text style={styles.loginButtonTextSmall}>Login</Text>
-            </TouchableOpacity>
-          </View>
+        {/* Positioned blur header */}
+        <View style={styles.blurHeaderContainer}>
+          <BlurView intensity={30} tint="light" style={styles.blurView}>
+            <View style={styles.headerContent}>
+              <Text style={[styles.title, isSmallScreen && styles.titleSmall]}>
+                ZenBoard
+              </Text>
+            </View>
+          </BlurView>
         </View>
 
-        <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false} nestedScrollEnabled={true}>
+        {/* Platform fallback for Android */}
+        {Platform.OS === 'android' && (
+          <View style={[styles.headerFallback]} />
+        )}
+
+        <ScrollView 
+          style={styles.scrollContainer} 
+          contentContainerStyle={{paddingTop: 60}} // Add padding for fixed header
+          showsVerticalScrollIndicator={false} 
+          nestedScrollEnabled={true}
+        >
           <View style={styles.statsRow}>
             <View style={styles.statCardHalf}>
               <Clock color={MatchaColorPalette[5]} size={24} style={styles.statIcon} />
@@ -835,6 +820,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     marginBottom: 16,
     marginLeft: 10,
+
   },
   headerContent: {
     flexDirection: 'row',
@@ -1234,51 +1220,26 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 5,
   },
-  // Login button styles
-  loginButton: {
+  blurHeaderContainer: {
+    position: 'absolute',
+    top: -10,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    paddingTop: Platform.OS === 'ios' ? 50 : 35,
+    paddingBottom: 10,
+  },
+  blurView: {
+    paddingHorizontal: 21,
+    paddingVertical: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: MatchaColorPalette[5],
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    justifyContent: 'space-between',
+    width: '100%',
   },
-  loginButtonText: {
-    fontFamily: 'Poppins-bold',
-    color: MatchaColorPalette[5],
-    fontSize: 16,
-  },
-  desktopLoginContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 20,
-  },
-  mobileLoginContainer: {
-    display: 'none', // Hide the original mobile login container
-  },
-  // Add smaller variant of login button for header
-  loginButtonSmall: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: MatchaColorPalette[5],
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  loginButtonTextSmall: {
-    fontFamily: 'Poppins-bold',
-    color: MatchaColorPalette[5],
-    fontSize: 14,
+  headerFallback: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,255,255,0.8)',
+    zIndex: 9,
   },
 });
